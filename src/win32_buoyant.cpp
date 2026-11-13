@@ -25,7 +25,7 @@ typedef uint32_t u32;
 typedef uint64_t u64;
 
 typedef float    f32;
-typedef float    f64;
+typedef double   f64;
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -41,8 +41,8 @@ typedef float    f64;
 #define MINIAUDIO_IMPLEMENTATION
 #include <miniaudio.h>
 
-// #undef INFINITE
-// #include <msdf-atlas-gen.h>
+#undef INFINITE
+#include <msdf-atlas-gen.h>
 
 #include "win32_buoyant.h"
 
@@ -274,6 +274,7 @@ i32 WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, i32 n
     // Texture2DBind(testTexture, 1);
     // Texture2DBind(test2Texture, 2);
 
+    Font* font = Renderer2DFontLoadFromFile(arena, "resources\\fonts\\opensans\\OpenSans-Medium.ttf");
     glCheckError(glClearColor(1.0f, 0.0f, 1.0f, 1.0f));
 
     f32 last_time = (f32)glfwGetTime();
@@ -330,6 +331,8 @@ i32 WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, i32 n
         };
 
         Renderer2DDrawTexturedQuadUvs(renderer, testTexture, textureCoords, transform3, glm::vec4(1.0f, 0.5f, 0.2f, 1.0f));
+
+        Renderer2DDrawString(renderer, "Hello, World", font, glm::mat4(1.0f), glm::vec4(1.0f));
 
         Renderer2DEndScene(renderer);
 

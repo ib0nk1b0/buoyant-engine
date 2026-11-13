@@ -2,7 +2,7 @@
 
 set IncludeDirs=-I"..\vendor\glm" -I"..\vendor\GLFW\include" -I"..\vendor\glad\include" -I"..\vendor\stb_image" -I"..\vendor\freetype\include" -I"..\vendor\msdf-atlas-gen\include" -I"..\vendor\msdfgen\include" -I"..\vendor\msdfgen\include\msdfgen" -I"..\vendor\miniaudio"
 
-set CommonCompilerFlags=-MT -nologo -Gm- -GR- -EHa- -Oi -WX -W4 -wd4201 -wd4100 -wd4189 -DBUOYANT_DEV=1 -FC -Z7 -Fmwin32_buoyant.map
+set CommonCompilerFlags=-MT -nologo -Gm- -GR- -EHa- -Oi -WX -W4 -wd4201 -wd4100 -wd4189 -wd4458 -wd4505 -DBUOYANT_DEV=1 -FC -Z7 -Fmwin32_buoyant.map
 
 set LibPaths=-LIBPATH:"..\vendor\GLFW\lib-vc2022" -LIBPATH:"..\vendor\freetype" -LIBPATH:"..\vendor\msdf-atlas-gen" -LIBPATH:"..\vendor\msdfgen"
 
