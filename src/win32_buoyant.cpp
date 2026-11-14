@@ -308,20 +308,21 @@ i32 WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, i32 n
 
         local_persist f32 rotation = 0.0f;
         rotation += 100.0f * dt;
+        // rotation = 0.0f;
         glm::mat4 transform1 = glm::translate(glm::mat4(1.0f), glm::vec3(-5.0f,  3.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
         glm::mat4 transform2 = glm::translate(glm::mat4(1.0f), glm::vec3( 5.0f,  2.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(-rotation), glm::vec3(0.0f, 0.0f, 1.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
         glm::mat4 transform3 = glm::translate(glm::mat4(1.0f), glm::vec3( 0.0f, -4.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(rotation*0.5f), glm::vec3(0.0f, 0.0f, 1.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
 
-        if ((counter / 144) % 2 == 0)
+        // if ((counter / 144) % 2 == 0)
         {
             Renderer2DDrawQuad(renderer, transform1, glm::vec4(1.0f));
             Renderer2DDrawTexturedQuad(renderer, testTexture, transform2, glm::vec4(1.0f));
         }
-        else
-        {
-            Renderer2DDrawQuad(renderer, transform2, glm::vec4(1.0f));
-            Renderer2DDrawTexturedQuad(renderer, testTexture, transform1, glm::vec4(1.0f));
-        }
+        // else
+        // {
+        //     Renderer2DDrawQuad(renderer, transform2, glm::vec4(1.0f));
+        //     Renderer2DDrawTexturedQuad(renderer, testTexture, transform1, glm::vec4(1.0f));
+        // }
 
         glm::vec2 textureCoords[4] = {
             { 0.25f, 0.25f },

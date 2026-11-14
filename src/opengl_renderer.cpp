@@ -74,6 +74,7 @@ internal Shader* ShaderLoadFromFile(Arena* arena, const char* filepath)
         if (!success) {
             char infoLog[512];
             glGetShaderInfoLog(vertexShader, 512, NULL, infoLog);
+            OutputDebugStringA(infoLog);
             BUOYANT_ASSERT(false);
         }
     }
@@ -88,6 +89,7 @@ internal Shader* ShaderLoadFromFile(Arena* arena, const char* filepath)
         if (!success) {
             char infoLog[512];
             glGetShaderInfoLog(fragmentShader, 512, NULL, infoLog);
+            OutputDebugStringA(infoLog);
             BUOYANT_ASSERT(false);
         }
     }
@@ -103,6 +105,7 @@ internal Shader* ShaderLoadFromFile(Arena* arena, const char* filepath)
         if (!success) {
             char infoLog[512];
             glGetProgramInfoLog(shader->program, 512, NULL, infoLog);
+            OutputDebugStringA(infoLog);
             BUOYANT_ASSERT(false);
         }
     }
@@ -198,7 +201,7 @@ struct QuadVertex
     glm::vec3 position;
     glm::vec4 color;
     glm::vec2 textureCoords;
-    float     textureIndex;
+    i32       textureIndex;
 };
 
 #define QUAD_VERTEX_COUNT 4
@@ -242,7 +245,6 @@ Renderer2D* Renderer2DInit(Arena* arena)
 
     renderer->MaxQuads = 1024; // TODO:
 
-
     //
     // Quad
     //
@@ -266,7 +268,7 @@ Renderer2D* Renderer2DInit(Arena* arena)
     glCheckError(glEnableVertexAttribArray(2));
     glCheckError(glVertexAttribPointer(2, 2, GL_FLOAT, GL_FALSE, sizeof(QuadVertex), (void*)offsetof(QuadVertex, textureCoords)));
     glCheckError(glEnableVertexAttribArray(3));
-    glCheckError(glVertexAttribPointer(3, 1, GL_FLOAT, GL_FALSE, sizeof(QuadVertex), (void*)offsetof(QuadVertex, textureIndex)));
+    glCheckError(glVertexAttribIPointer(3, 1, GL_INT, sizeof(QuadVertex), (void*)offsetof(QuadVertex, textureIndex)));
 
     //
     // Text
@@ -449,7 +451,7 @@ void Renderer2DDrawTexturedQuadUvs(Renderer2D* renderer, Texture2D* texture, con
         renderer->QuadVertexPtr->position = transform * renderer->QuadVertexPositions[i];
         renderer->QuadVertexPtr->color = color;
         renderer->QuadVertexPtr->textureCoords = textureCoords[i];
-        renderer->QuadVertexPtr->textureIndex = textureIndex;
+        renderer->QuadVertexPtr->textureIndex = (int)textureIndex;
         renderer->QuadVertexPtr++;
     }
 
@@ -575,19 +577,19 @@ void Renderer2DDrawString(Renderer2D* renderer, const char* string, Font* font, 
     const auto& fontGeometry = font->fontData->FontGeometry;
     const auto& metrics = fontGeometry.getMetrics();
 
-    float textureIndex = -1.0f;
+    i32 textureIndex = -1;
     for (u32 i = 0; i < renderer->TextureSlotIndex; i++)
     {
         if (renderer->TextureSlots[i]->rendererID == font->fontAtlas->rendererID)
         {
-            textureIndex = (f32)i;
+            textureIndex = i;
             break;
         }
     }
 
-    if (textureIndex == -1.0f && renderer->TextureSlotIndex < renderer->MaxTextureSlots)
+    if (textureIndex == -1 && renderer->TextureSlotIndex < renderer->MaxTextureSlots)
     {
-        textureIndex = (float)renderer->TextureSlotIndex;
+        textureIndex = renderer->TextureSlotIndex;
         renderer->TextureSlots[renderer->TextureSlotIndex++] = font->fontAtlas;
     }
 
