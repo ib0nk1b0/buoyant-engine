@@ -343,26 +343,18 @@ Renderer2D* Renderer2DInit(Arena* arena)
     return renderer;
 }
 
-void Renderer2DBeginScene(Renderer2D* renderer, const glm::mat4& camera)
+internal void Renderer2DStartBatch(Renderer2D* renderer)
 {
-    ShaderBind(renderer->QuadShader);
-    u32 location = glGetUniformLocation(renderer->QuadShader->program, "u_ViewProjection");
-    glCheckError(glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(camera)));
-
     renderer->QuadVertexPtr = renderer->QuadVertexBase;
     renderer->QuadIndexCount = 0;
-
-    ShaderBind(renderer->TextShader);
-    location = glGetUniformLocation(renderer->TextShader->program, "u_ViewProjection");
-    glCheckError(glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(camera)));
 
     renderer->TextVertexPtr = renderer->TextVertexBase;
     renderer->TextIndexCount = 0;
 
-    renderer->TextureSlotIndex = 1; // TODO: resetting every frame is that correct?
+    renderer->TextureSlotIndex = 1;
 }
 
-void Renderer2DEndScene(const Renderer2D* renderer)
+internal void Renderer2DFlush(const Renderer2D* renderer)
 {
     if (renderer->QuadIndexCount)
     {
@@ -407,6 +399,30 @@ void Renderer2DEndScene(const Renderer2D* renderer)
     }
 }
 
+internal void Renderer2DNextBatch(Renderer2D* renderer)
+{
+    Renderer2DFlush(renderer);
+    Renderer2DStartBatch(renderer);
+}
+
+void Renderer2DBeginScene(Renderer2D* renderer, const glm::mat4& camera)
+{
+    ShaderBind(renderer->QuadShader);
+    u32 location = glGetUniformLocation(renderer->QuadShader->program, "u_ViewProjection");
+    glCheckError(glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(camera)));
+
+    ShaderBind(renderer->TextShader);
+    location = glGetUniformLocation(renderer->TextShader->program, "u_ViewProjection");
+    glCheckError(glUniformMatrix4fv(location, 1, GL_FALSE, glm::value_ptr(camera)));
+
+    Renderer2DStartBatch(renderer);
+}
+
+void Renderer2DEndScene(const Renderer2D* renderer)
+{
+    Renderer2DFlush(renderer);
+}
+
 
 void Renderer2DDrawQuad(Renderer2D* renderer, const glm::mat4& transform, const glm::vec4& color)
 {
@@ -428,7 +444,10 @@ void Renderer2DDrawTexturedQuad(Renderer2D* renderer, Texture2D* texture, const 
 
 void Renderer2DDrawTexturedQuadUvs(Renderer2D* renderer, Texture2D* texture, const glm::vec2* textureCoords, const glm::mat4& transform, const glm::vec4& color)
 {
-    BUOYANT_ASSERT(renderer->QuadIndexCount + QUAD_INDEX_COUNT <= renderer->MaxQuads * QUAD_INDEX_COUNT);
+    if(renderer->QuadIndexCount + QUAD_INDEX_COUNT >= renderer->MaxQuads * QUAD_INDEX_COUNT)
+    {
+        Renderer2DNextBatch(renderer);
+    }
 
     f32 textureIndex = -1.0f;
     for (u32 i = 0; i < renderer->TextureSlotIndex; i++)
@@ -478,7 +497,7 @@ global const CharsetRange charsetRanges[] =
 
 struct MSDFData
 {
-    std::vector<msdf_atlas::GlyphGeometry> Glyphs;
+    std::vector<msdf_atlas::GlyphGeometry> Glyphs; // TODO:
     msdf_atlas::FontGeometry FontGeometry;
 };
 
@@ -572,7 +591,11 @@ Font* Renderer2DFontLoadFromFile(Arena* arena, const char* filepath)
 void Renderer2DDrawString(Renderer2D* renderer, const char* string, Font* font, const glm::mat4& transform, const glm::vec4& color)
 {
     u64 stringLength = strlen(string);
-    BUOYANT_ASSERT(renderer->TextIndexCount + QUAD_INDEX_COUNT * stringLength <= renderer->MaxQuads * QUAD_INDEX_COUNT);
+    if (renderer->TextIndexCount + QUAD_INDEX_COUNT * stringLength >= renderer->MaxQuads * QUAD_INDEX_COUNT)
+    {
+        Renderer2DNextBatch(renderer);
+    }
+    BUOYANT_ASSERT(stringLength <= renderer->MaxQuads); // TODO: currently only support strings upto renderer->MaxQuads length
 
     const auto& fontGeometry = font->fontData->FontGeometry;
     const auto& metrics = fontGeometry.getMetrics();
