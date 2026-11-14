@@ -46,6 +46,30 @@ typedef double   f64;
 
 #include "win32_buoyant.h"
 
+char* PlatformReadEntireFile(Arena* arena, const char* filepath, u32* outSize)
+{
+    HANDLE fileHandle = CreateFileA(filepath, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
+
+    BUOYANT_ASSERT(fileHandle != INVALID_HANDLE_VALUE);
+
+    LARGE_INTEGER fileSize;
+    BUOYANT_ASSERT(GetFileSizeEx(fileHandle, &fileSize));
+
+    BUOYANT_ASSERT(fileSize.QuadPart <= 0xFFFFFFFF);
+
+    u32 fileSize32 = (u32)fileSize.QuadPart;
+
+    char* result = ArenaPushArray(arena, char, fileSize32);
+    if (outSize) *outSize = fileSize32;
+
+    DWORD bytesRead;
+    BUOYANT_ASSERT(ReadFile(fileHandle, result, fileSize32, &bytesRead, 0) && fileSize32 == bytesRead);
+
+    CloseHandle(fileHandle);
+    
+    return result;
+}
+
 Arena* ArenaCreate(u64 size)
 {
     size_t totalSize = size + sizeof(Arena);
@@ -99,24 +123,9 @@ StringView SvReadEntireFile(Arena* arena, const char* filepath)
 {
     StringView result = {};
 
-    HANDLE fileHandle = CreateFileA(filepath, GENERIC_READ, FILE_SHARE_READ, 0, OPEN_EXISTING, 0, 0);
-
-    BUOYANT_ASSERT(fileHandle != INVALID_HANDLE_VALUE);
-
-    LARGE_INTEGER fileSize;
-    BUOYANT_ASSERT(GetFileSizeEx(fileHandle, &fileSize));
-
-    BUOYANT_ASSERT(fileSize.QuadPart <= 0xFFFFFFFF);
-
-    u32 fileSize32 = (u32)fileSize.QuadPart;
-
-    result.data = ArenaPushArray(arena, char, fileSize32);
+    u32 fileSize32 = 0;
+    result.data = PlatformReadEntireFile(arena, filepath, &fileSize32);
     result.size = fileSize32;
-
-    DWORD bytesRead;
-    BUOYANT_ASSERT(ReadFile(fileHandle, result.data, fileSize32, &bytesRead, 0) && fileSize32 == bytesRead);
-
-    CloseHandle(fileHandle);
 
     return result;
 }
@@ -195,6 +204,7 @@ internal void GLFWKeyCallback(GLFWwindow* window, i32 key, i32 scancode, i32 act
 }
 
 #include "opengl_renderer.cpp"
+#include "buoyant.cpp"
 
 inline bool WindowShouldClose()
 {
@@ -208,6 +218,7 @@ i32 WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, i32 n
     //
 
     Arena* arena = ArenaCreate(Megabytes(64));
+    Arena* transientArena = ArenaCreate(Megabytes(64));
 
     //
     // GLFW
@@ -233,10 +244,13 @@ i32 WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, i32 n
     // Miniaudio
     //
 
+    // TODO: pull this out
     ma_result result;
     ma_engine engine;
 
     BUOYANT_ASSERT(ma_engine_init(NULL, &engine) == MA_SUCCESS);
+
+    ma_engine_set_volume(&engine, 0.2f);
 
     // The simplest and least flexible way to play a sound is like so:
     // sound object is managed by miniaudio internally
@@ -255,36 +269,26 @@ i32 WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, i32 n
     // Renderer setup
     //
 
-    // char versionBuf[256];
-    // snprintf(versionBuf, 256, "Version:  %s\n", glGetString(GL_VERSION));
-    // OutputDebugStringA(versionBuf);
+    char versionBuf[256];
+    snprintf(versionBuf, 256, "Version:  %s\n", glGetString(GL_VERSION));
+    OutputDebugStringA(versionBuf);
 
+    // TODO: 
     glEnable(GL_DEPTH_TEST);
     glEnable(GL_BLEND);
     glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
     
-    // TODO: check for errors
+    GameMemory* gameMemory = ArenaPushStruct(arena, GameMemory);
+    gameMemory->permenantArena = arena;
+    gameMemory->transientArena = transientArena;
 
-    Renderer2D* renderer = Renderer2DInit(arena);
-
-    Texture2D* testTexture = Texture2DCreateFromFile(arena, "resources\\textures\\test.png", true);
-    // Texture2D* test2Texture = Texture2DCreateFromFile(arena, "resources\\textures\\test2.png", true);
-    //
-    // Texture2DBind(whiteTexture, 0);
-    // Texture2DBind(testTexture, 1);
-    // Texture2DBind(test2Texture, 2);
-
-    Font* font = Renderer2DFontLoadFromFile(arena, "resources\\fonts\\opensans\\OpenSans-Medium.ttf");
     glCheckError(glClearColor(1.0f, 0.0f, 1.0f, 1.0f));
 
     f32 last_time = (f32)glfwGetTime();
     i32 width, height;
-    i32 counter = 0;
     while(!WindowShouldClose())
     {
         glfwPollEvents();
-
-        counter++;
 
         f32 time = (f32)glfwGetTime();
         f32 dt = time - last_time;
@@ -292,50 +296,12 @@ i32 WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance, LPSTR lpCmdLine, i32 n
 
         glfwGetFramebufferSize(g_Window, &width, &height);
 
-        glCheckError(glViewport(0, 0, width, height));
+        glCheckError(glViewport(0, 0, width, height)); // TODO: should be done on resize only
+ 
+        // TODO: should this be in renderer?
         glCheckError(glClear(GL_COLOR_BUFFER_BIT|GL_DEPTH_BUFFER_BIT));
 
-        glm::mat4 camera, view, projection, viewProjection;
-
-        camera = glm::mat4(1.0f);
-
-        view = glm::inverse(camera);
-
-        projection = glm::ortho(-16.0f, 16.0f, -9.0f, 9.0f, -1.0f, 1.0f);
-        viewProjection = projection * view;
-
-        Renderer2DBeginScene(renderer, viewProjection);
-
-        local_persist f32 rotation = 0.0f;
-        rotation += 100.0f * dt;
-        // rotation = 0.0f;
-        glm::mat4 transform1 = glm::translate(glm::mat4(1.0f), glm::vec3(-5.0f,  3.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(rotation), glm::vec3(0.0f, 0.0f, 1.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
-        glm::mat4 transform2 = glm::translate(glm::mat4(1.0f), glm::vec3( 5.0f,  2.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(-rotation), glm::vec3(0.0f, 0.0f, 1.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
-        glm::mat4 transform3 = glm::translate(glm::mat4(1.0f), glm::vec3( 0.0f, -4.0f, 0.0f)) * glm::rotate(glm::mat4(1.0f), glm::radians(rotation*0.5f), glm::vec3(0.0f, 0.0f, 1.0f)) * glm::scale(glm::mat4(1.0f), glm::vec3(5.0f));
-
-        // if ((counter / 144) % 2 == 0)
-        {
-            Renderer2DDrawQuad(renderer, transform1, glm::vec4(1.0f));
-            Renderer2DDrawTexturedQuad(renderer, testTexture, transform2, glm::vec4(1.0f));
-        }
-        // else
-        // {
-        //     Renderer2DDrawQuad(renderer, transform2, glm::vec4(1.0f));
-        //     Renderer2DDrawTexturedQuad(renderer, testTexture, transform1, glm::vec4(1.0f));
-        // }
-
-        glm::vec2 textureCoords[4] = {
-            { 0.25f, 0.25f },
-            { 0.25f, 0.75f },
-            { 0.75f, 0.75f },
-            { 0.75f, 0.25f },
-        };
-
-        Renderer2DDrawTexturedQuadUvs(renderer, testTexture, textureCoords, transform3, glm::vec4(1.0f, 0.5f, 0.2f, 1.0f));
-
-        Renderer2DDrawString(renderer, "Hello, World", font, glm::mat4(1.0f), glm::vec4(1.0f));
-
-        Renderer2DEndScene(renderer);
+        BuoyantUpdate(gameMemory, dt);
 
         glfwSwapBuffers(g_Window);
     }
