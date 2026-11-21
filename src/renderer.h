@@ -1,8 +1,13 @@
 #pragma once
 
+// TODO: opaque for now...
 struct Renderer2D;
 struct Texture2D;
 struct Font;
+
+Texture2D* Texture2DCreate(Arena* arena, u32 width, u32 height, u32 channels, const void* data, bool isPixelArt = false);
+Texture2D* Texture2DCreateFromFile(Arena* arena, const char* filepath, bool isPixelArt = false);
+void Texture2DBind(const Texture2D* texture, u32 slot = 0);
 
 Renderer2D* Renderer2DInit(Arena* arena);
 

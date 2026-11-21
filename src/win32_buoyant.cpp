@@ -4,28 +4,8 @@
 #include <stdlib.h>
 #include <stdint.h>
 #include <time.h>
+#define WIN32_LEAN_AND_MEAN
 #include <Windows.h>
-
-#define BUOYANT_ASSERT(x) assert(x)
-
-#define UNIMPLEMENTED() BUOYANT_ASSERT(false)
-
-#define internal static
-#define global static
-#define local_persist static
-
-typedef int8_t   i8;
-typedef int16_t  i16;
-typedef int32_t  i32;
-typedef int64_t  i64;
-
-typedef uint8_t  u8;
-typedef uint16_t u16;
-typedef uint32_t u32;
-typedef uint64_t u64;
-
-typedef float    f32;
-typedef double   f64;
 
 #include <glm/glm.hpp>
 #include <glm/gtc/type_ptr.hpp>
@@ -44,7 +24,10 @@ typedef double   f64;
 #undef INFINITE
 #include <msdf-atlas-gen.h>
 
-#include "win32_buoyant.h"
+#define BUOYANT_ASSERT(x) assert(x)
+#define UNIMPLEMENTED() BUOYANT_ASSERT(false)
+
+#include "base.h"
 
 char* PlatformReadEntireFile(Arena* arena, const char* filepath, u32* outSize)
 {

@@ -1,4 +1,4 @@
-#include "opengl_renderer.h"
+#include "renderer.h"
 
 GLenum glCheckError_(const char *file, int line)
 {
@@ -129,7 +129,7 @@ struct Texture2D
     u32 height;
 };
 
-internal Texture2D* Texture2DCreate(Arena* arena, u32 width, u32 height, u32 channels, const void* data, bool isPixelArt = false)
+Texture2D* Texture2DCreate(Arena* arena, u32 width, u32 height, u32 channels, const void* data, bool isPixelArt)
 {
     // NOTE: Should it return the texture
     // OR should it fill out a texture that is passed in
@@ -172,7 +172,7 @@ internal Texture2D* Texture2DCreate(Arena* arena, u32 width, u32 height, u32 cha
     return texture;
 }
 
-internal Texture2D* Texture2DCreateFromFile(Arena* arena, const char* filepath, bool isPixelArt = false)
+Texture2D* Texture2DCreateFromFile(Arena* arena, const char* filepath, bool isPixelArt)
 {
     stbi_set_flip_vertically_on_load(true);
 
@@ -186,7 +186,7 @@ internal Texture2D* Texture2DCreateFromFile(Arena* arena, const char* filepath, 
     return texture;
 }
 
-internal void Texture2DBind(const Texture2D* texture, u32 slot = 0)
+void Texture2DBind(const Texture2D* texture, u32 slot)
 {
     glCheckError(glBindTextureUnit(slot, texture->rendererID));
 }
